@@ -5,7 +5,6 @@ local _V = {}
 
 _V.Key = "Scaling Difficulty"
 _V.Seed = 0
-_V.Reset = false
 
 --- @type Stats
 _V.Stats = {}
@@ -78,8 +77,7 @@ _V.Settings = {}
 --- @type table< string, Settings >
 _V.Hub = {}
 _V.NPC = {
-    Enemy = true,
-    Ally = true,
+    Standard = true,
     Summon = true,
     Boss = true,
     Player = true

@@ -73,6 +73,14 @@ return function( _V )
         return h
     end
 
+    _F.Keys = function( tbl )
+        local ret = {}
+        for k,_ in pairs( tbl ) do
+            table.insert( ret, k )
+        end
+        return ret
+    end
+
     _F.DefaultBlueprint = function()
         local ret = {}
 
@@ -143,23 +151,14 @@ return function( _V )
 
     _F.IsPlayer = function( ent )
         local uuid = _F.UUID( ent )
-        return not ent.Bound and ent.Stats or Osi.DB_Players:Get( uuid )[ 1 ]
-    end
-
-    _F.IsEnemy = function( uuid )
-        for _,p in pairs( Osi.DB_Players:Get( nil ) ) do
-            if Osi.IsEnemy( uuid, p[ 1 ] ) == 1 then
-                return true
-            end
-        end
+        return not ent.Bound and ent.Stats or Osi.DB_Players:Get( uuid )[ 1 ] or Osi.DB_Origins:Get( uuid )[ 1 ]
     end
 
     _F.Archetype = function( ent, uuid )
         if _F.IsPlayer( ent ) then return "Player" end
         if Osi.IsSummon( uuid ) == 1 then return "Summon" end
         if _F.IsBoss( ent ) then return "Boss" end
-        if _F.IsEnemy( uuid ) then return "Enemy" end
-        return "Ally"
+        return "Standard"
     end
 
     _F.GetEntity = function( ent )
@@ -173,16 +172,16 @@ return function( _V )
     end
 
     _F.AddNPC = function( ent )
-        local eoc = ent.EocLevel
         local uuid = _F.UUID( ent )
-        if not eoc or not uuid then return end
+        if not uuid then return end
 
         if not _V.Entities[ uuid ] then
+            local eoc = ent.EocLevel
+            local data = ent.Data
             local stats = ent.Stats
             local health = ent.Health
-            local visual = ent.GameObjectVisual
-            local data = ent.Data
-            if not stats or not health or not visual or not data then return end
+
+            if not eoc or not data or not stats or not health then return end
 
             local type = _F.Archetype( ent, uuid )
 
@@ -199,7 +198,7 @@ return function( _V )
             end
 
             _V.Entities[ uuid ] = {
-                Name = ent.ServerCharacter and ent.ServerCharacter.Template.Name or uuid,
+                Name = ent.ServerCharacter and ent.ServerCharacter.Template.Name or data.StatsId or uuid,
                 Scaled = false,
                 Type = type,
                 Hub = _V.Hub[ type ],
@@ -209,14 +208,14 @@ return function( _V )
                 Constitution = stats.AbilityModifiers[ 4 ],
                 Physical = stats.Abilities[ 2 ] <= stats.Abilities[ 3 ] and "Dexterity" or "Strength",
                 Casting = tostring( stats.SpellCastingAbility ),
-                Stats = _F.Default( "Stats" ),
+                Stats = _F.Default( _V.Stats ),
                 Skills = {},
-                Resource = _F.Default( "Resource", true ),
-                OldStats = _F.Default( "Stats" ),
-                OldResource = _F.Default( "Resource" ),
+                Resource = _F.Default( _V.Resource, true ),
+                OldStats = _F.Default( _V.Stats ),
+                OldResource = _F.Default( _V.Resource ),
                 OldSpells = 0,
                 OldBlacklist = "",
-                OldSize = visual.Scale,
+                OldSize = 0,
                 OldSkills = {},
                 OldWeight = data.Weight,
                 AC = {
@@ -243,7 +242,7 @@ return function( _V )
                             return original
                         end
                     )(),
-                    Current = _F.Default( "Abilities" )
+                    Current = _F.Default( _F.Keys( _V.Abilities ) )
                 },
                 CleanBoosts = true,
                 Class = _F.GetClass( ent )
@@ -253,10 +252,10 @@ return function( _V )
         _F.UpdateNPC( uuid )
     end
 
-    _F.Default = function( type, string )
+    _F.Default = function( tbl, str )
         local stat = {}
-        for _,v in ipairs( _V[ type ] ) do
-            stat[ v ] = string and "" or 0.0
+        for _,v in ipairs( tbl ) do
+            stat[ v ] = str and "" or 0.0
         end
         return stat
     end
@@ -474,9 +473,10 @@ return function( _V )
     end
 
     _F.SetLevel = function( uuid, entity, ent )
-        if not entity or not ent or entity.Type == "Player" or Osi.DB_Origins:Get( uuid )[ 1 ] then return end
+        local eoc = ent.EocLevel
+        if not entity or not ent or not eoc or entity.Type == "Player" then return end
 
-        ent.EocLevel.Level = entity.LevelBase + entity.LevelChange
+        eoc.Level = entity.LevelBase + entity.LevelChange
 
         ent:Replicate( "EocLevel" )
     end
@@ -591,10 +591,6 @@ return function( _V )
             if not entity or not entity.Hub then _F.AddNPC( ent ) return end
 
             local arch = _F.Archetype( ent, uuid )
-            if Osi.HasActiveStatusWithGroup( uuid, "SG_Dominated" ) == 1 then
-                if arch == "Enemy" then arch = "Ally"
-                elseif arch == "Ally" then arch = "Enemy" end
-            end
             entity.Type = arch
             entity.Hub = _V.Hub[ arch ]
 
@@ -624,7 +620,7 @@ return function( _V )
             local ran = _F.RNG( _F.Hash( uuid ) )
 
             for _,stat in ipairs( _V.Stats ) do
-                if type( entity.Hub.Bonus[ stat ] ) == "number" then
+                if stat ~= "Enabled" then
                     local vari = ran( entity.Hub.Variation[ stat ] )
                     if ran() < 0.5 then
                         vari = vari * -1.0
@@ -638,7 +634,7 @@ return function( _V )
             end
 
             for _,resource in ipairs( _V.Resource ) do
-                if type( entity.Resource[ resource ] ) == "string" then
+                if resource ~= "Enabled" then
                     entity.Resource[ resource ] = not entity.Hub.Resource.Enabled and "" or entity.Hub.Resource[ resource ]
                 end
             end

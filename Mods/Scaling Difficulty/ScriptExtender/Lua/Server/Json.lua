@@ -15,11 +15,10 @@ return function( _V )
                         Name = "NPC",
                         Tooltip = "Choose which NPC to display.",
                         Type = "radio",
-                        Default = "Enemy",
+                        Default = "Standard",
                         Options = {
                             Choices = {
-                                "Enemy",
-                                "Ally",
+                                "Standard",
                                 "Summon",
                                 "Boss",
                                 "Player"

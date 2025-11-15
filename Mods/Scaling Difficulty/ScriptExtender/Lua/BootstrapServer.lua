@@ -34,15 +34,21 @@ if MCM then
                 local modvar = Ext.Vars.GetModVariables( ModuleUUID )
                 modvar.Seed = math.random( math.maxinteger )
                 _V.Seed = modvar.Seed
+
+                _F.UpdateNPC()
             elseif payload.value ~= nil then
                 local s = split( payload.settingId )
 
                 if _V.Hub[ s[ 2 ] ] and _V.Hub[ s[ 2 ] ][ s[ 1 ] ] then
                     _V.Hub[ s[ 2 ] ][ s[ 1 ] ][ s[ 3 ] ] = payload.value
                 end
-            end
 
-            _V.Reset = true
+                for u,e in pairs( _V.Entities ) do
+                    if e.Type == s[ 2 ] then
+                        _F.UpdateNPC( u )
+                    end
+                end
+            end
         end
     )
 end
