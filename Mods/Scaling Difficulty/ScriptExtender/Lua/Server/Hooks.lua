@@ -33,6 +33,8 @@ return function( _V, _F )
                         Settings[ setting ] = val
                     end
                 end
+
+                _F.BlacklistNPC()
             end
 
             SetSettings()
@@ -45,7 +47,9 @@ return function( _V, _F )
 
     local function Dispatch( func, e, index )
         local uuid, entity, ent = _F.GetEntity( e )
-        func( uuid, entity, ent, index )
+        if uuid and entity and ent then
+            func( uuid, entity, ent, index )
+        end
     end
 
     Ext.Osiris.RegisterListener(

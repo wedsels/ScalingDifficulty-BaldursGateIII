@@ -36,6 +36,9 @@ if MCM then
                 _V.Seed = modvar.Seed
 
                 _F.UpdateNPC()
+            elseif payload.settingId == "Blacklist" then
+                _F.BlacklistNPC()
+                _F.UpdateNPC()
             elseif payload.value ~= nil then
                 local s = split( payload.settingId )
 

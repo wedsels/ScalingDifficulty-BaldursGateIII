@@ -198,7 +198,7 @@ return function( _V )
             end
 
             _V.Entities[ uuid ] = {
-                Name = ent.ServerCharacter and ent.ServerCharacter.Template.Name or data.StatsId or uuid,
+                Name = ent.DisplayName and Ext.Loca.GetTranslatedString( ent.DisplayName.Name.Handle.Handle ) or ent.ServerCharacter and ent.ServerCharacter.Template.Name or data.StatsId or uuid,
                 Scaled = false,
                 Type = type,
                 Hub = _V.Hub[ type ],
@@ -578,6 +578,16 @@ return function( _V )
         xp.Experience = math.max( 0, _F.Whole( ( base + entity.Stats.Experience ) * ( 1.0 + entity.Stats.PercentExperience ) ) )
     end
 
+    _F.BlacklistNPC = function()
+        if MCM then
+            _V.Blacklist = {}
+
+            for _,i in ipairs( _F.Split( MCM.Get( "Blacklist" ), "," ) ) do
+                _V.Blacklist[ i:gsub( "[%s%p]", "" ):lower() ] = true
+            end
+        end
+    end
+
     _F.UpdateNPC = function( uuid )
         local entity, ent
         uuid, entity, ent = _F.GetEntity( uuid )
@@ -590,32 +600,36 @@ return function( _V )
             if not ent then _V.Entities[ uuid ] = nil return end
             if not entity or not entity.Hub then _F.AddNPC( ent ) return end
 
+            local disabled = _V.Blacklist[ entity.Name:gsub( "[%s%p]", "" ):lower() ]
+
             local arch = _F.Archetype( ent, uuid )
             entity.Type = arch
             entity.Hub = _V.Hub[ arch ]
 
             local party = 0
-            for _,p in pairs( Osi.DB_Players:Get( nil ) ) do
-                local level = Osi.GetLevel( p[ 1 ] )
-                if level > party then
-                    party = level
+            if not disabled then
+                for _,p in pairs( Osi.DB_Players:Get( nil ) ) do
+                    local level = Osi.GetLevel( p[ 1 ] )
+                    if level > party then
+                        party = level
+                    end
                 end
             end
 
-            local level = math.max( 0, party + ( entity.Hub.General.Enabled and entity.Hub.General.LevelBonus or 0 ) )
+            local level = math.max( 0, party + ( ( not disabled and entity.Hub.General.Enabled ) and entity.Hub.General.LevelBonus or 0 ) )
 
             if entity.Hub.General.MaxLevel > 0 then
                 level = math.min( level, entity.Hub.General.MaxLevel )
             end
 
-            if level < entity.LevelBase and ( not entity.Hub.General.Enabled or not entity.Hub.General.Downscaling ) then
+            if level < entity.LevelBase and ( ( disabled or not entity.Hub.General.Enabled ) or not entity.Hub.General.Downscaling ) then
                 level = entity.LevelBase
             elseif arch == "Player" then
                 entity.LevelBase = 1
                 level = ent.EocLevel.Level
             end
 
-            entity.LevelChange = not entity.Hub.Leveling.Enabled and 0 or level - entity.LevelBase
+            entity.LevelChange = ( disabled or not entity.Hub.Leveling.Enabled ) and 0 or level - entity.LevelBase
 
             local ran = _F.RNG( _F.Hash( uuid ) )
 
@@ -627,15 +641,15 @@ return function( _V )
                     end
 
                     entity.Stats[ stat ]
-                        = ( not entity.Hub.Bonus.Enabled and 0 or entity.Hub.Bonus[ stat ] )
+                        = ( ( disabled or not entity.Hub.Bonus.Enabled ) and 0 or entity.Hub.Bonus[ stat ] )
                         + entity.Hub.Leveling[ stat ] * entity.LevelChange
-                        + ( not entity.Hub.Variation.Enabled and 0 or vari )
+                        + ( ( disabled or not entity.Hub.Variation.Enabled ) and 0 or vari )
                 end
             end
 
             for _,resource in ipairs( _V.Resource ) do
                 if resource ~= "Enabled" then
-                    entity.Resource[ resource ] = not entity.Hub.Resource.Enabled and "" or entity.Hub.Resource[ resource ]
+                    entity.Resource[ resource ] = ( disabled or not entity.Hub.Resource.Enabled ) and "" or entity.Hub.Resource[ resource ]
                 end
             end
 

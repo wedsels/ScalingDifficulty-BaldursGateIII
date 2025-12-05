@@ -125,6 +125,9 @@ _V.NPC = {
 --- @type table< string, Entity >
 _V.Entities = {}
 
+--- @type table< string, boolean >
+_V.Blacklist = {}
+
 _V.Abilities = {
     Strength = 2,
     Dexterity = 3,
