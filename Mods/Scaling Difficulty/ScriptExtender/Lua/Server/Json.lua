@@ -95,7 +95,7 @@ return function( _V )
                     {
                         Id = "Blacklist",
                         Name = "Blacklist",
-                        Tooltip = "Names of the NPC characters to not be scaled, separated by ','.\nEx. rAt;imP;COMMANDER ZhaLk;intellectdevourer",
+                        Tooltip = "Names of the NPC characters to not be scaled, separated by ','.\nEx. rAt,imP,COMMANDER ZhaLk,intellectdevourer",
                         Type = "text",
                         Default = ""
                     }
